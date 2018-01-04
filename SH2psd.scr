@@ -1,0 +1,576 @@
+#! /bin/bash
+
+hmdir=/
+NMAX=60
+data=$hmdir/Osuwork/GRACE/data/CSRRL05
+product=CSR
+
+#Parameter for earthquake
+ymdse=("2002 1 1" " 2015 1 1")
+neq=1
+#"2011 Tohoku" "2013 Okhotsk sea"     "2010 Maule" "2014 Iquique"
+#"2004 Sumatra" "2012 Indian Ocean" "2007 Bengkulu"
+texteqr=("2008 Wenchuan" )
+#"2011 3 11" "2013 5 24"    "2010 2 27" "2014 4 1"  
+#"2004 12 26" "2012 4 11" "2007 9 12"
+ymdeqr=("2008 5 12")
+#GCMT  location http://www.globalcmt.org/CMTsearch.html
+#"37.52 143.05" "54.61 153.77 "    "-35.98 -73.15" "-19.77 -70.98"
+#"3.09 94.26" "2.35 92.82" "-3.78 100.99"
+latloneqr=("31.44  104.10")
+lend=5
+#"2011 1 75" "2013 1 136"    "2010 1 45" ""
+#"2004 1 351" "2005 1 16" "2005 1 45" "2005 1 75"    "2012 1 94" "2007 1 258"
+ymddr=("2008 5 12")
+lend=`for i in "${ymddr[@]}"; do echo $i; done |wc -l`
+stdflag=1  # 0, use the std in the data; 1, std=1;
+linear=true
+numo=4
+latlonor=("32.45 104.6" " 25.75 109.8" " 38.35 109.6" " 36.55 101") 
+
+#Parameter for model prediction
+faultfiler=("'s2008WENCHU03FIEL.fsp'" \
+            )
+faulttyper=("'SIV'")
+region="50 10 85  125"  # latN latS lonW lonE ; 90 > lat > -90; 0 <= lon<360
+regid="WEN" #"Chile"
+
+#Parameter not changed too often
+workdir=`pwd`/workCSR
+sdir=$hmdir/Osuwork/GRACE/Software
+ncut=1
+filelist='filelist'
+C20file=$sdir/Replace_Group_SHCs/TN-07_C20_SLR_match.txt
+ostdflag=1  # 1, output std for SH; 0, don't output std, e.g. for Guo Lao-shi's code
+C20flag=0   # 1, correct C20 using SLR value; 0, don't correct C20
+rc=0	    # 0, default value r=R0; > 100, r=rc;
+grdflag=0   # 0, default format of grid: lat, lon,; 1, grid is the format provided by JSG
+
+
+# Begin the processing
+if [ ! -d $workdir ]
+then
+   mkdir $workdir
+fi
+cd $workdir
+
+# Preparation 
+#1  : Generating grid
+#1.1: Generating a global grid for bw=nmax+1+30 
+let "bw = $NMAX + 1 + 30 "
+echo bw= $bw
+gridfile=grid_Gauss_bw"$bw"
+
+BIN="Ggrid"
+eval $BIN << EOF
+$bw $gridfile
+90 -90 0 360
+EOF
+
+#1.2: Generating a regional grid for bw=900
+bwden=900
+let "NMAXden = $bwden - 1 "
+echo bwden= $bwden
+gridfile2=grid_Gauss_bw"$bwden"
+rm $gridfile2
+BIN="Ggrid"
+eval $BIN << EOF
+$bwden $gridfile2
+$region
+EOF
+
+if true
+#if false
+then
+
+#I: To get gravity and gravity gradient from GRACE data 
+#-1: Get data
+ifilelist=ifilelist
+if [ "$product" == "OSU" ]
+then
+  rm 2*L2
+  ln -fs $data/200[3-9]*L2 .
+  ln -fs $data/201*L2 .
+# ls 2*L2 > $ifilelist
+  rm 2*.coe
+  ln -fs $data/2*.coe .
+  ls 2*.coe > $ifilelist
+#elif [ "$product" == "Arctic" ]
+#then 
+else
+  rm GSM*
+  ln -fs $data/GSM-2_2*5 .
+#  ln -fs $data/GSM-2_*6030* .
+  ls GSM-2_* > $ifilelist
+fi
+
+#0: Rename
+
+renameodir=rename"$product"
+renameoflist=renameoflist
+
+if [ ! -d $renameodir ]
+then
+   mkdir $renameodir
+fi
+rm $renameodir/*
+if [ "$product" == "OSU" ]
+then
+  BIN=$sdir/Rename_L2_Files/changenameOSU.sh
+else
+  BIN=changenameCSR.sh
+fi
+$BIN $ifilelist $renameodir $renameoflist
+
+#1: Subtracting a background model and repalce C20
+
+BIN=Subtract_Reference_SHCs_wwoH_NMAXncut_wstdM_SLRdC20
+PARAM=Subtract_filelist
+subodir="$product"mbg
+
+if [ ! -d $subodir ]
+then
+   mkdir $subodir
+fi
+rm $subodir/*
+
+#1.0 Prepare the background model and label
+if [ "$product" == "OSU" ]
+then
+  bgdir=$sdir/Subtract_Reference_SHCs/codedcl
+  bgfile=empty
+  labelbg="''"
+  label="''"
+else
+  bgdir=$hmdir/Osuwork/GRACE/data
+  bgfile=GOCO02S_0.txt
+  labelbg='GRCOF2'
+  label='GRCOF2'
+fi
+
+cd $renameodir
+ln -fs $bgdir/$bgfile .
+cd $workdir
+
+#1.1 Prepare the filename list
+mv $renameoflist $filelist
+line=`cat $filelist|wc -l`
+echo 'Number of files:' $line
+rm -f tmp
+for file in `cat $filelist`
+do
+# echo "$file"_0.txt "$file"_2_M.txt >>tmp
+  echo $label  "$file"_0.txt "$file"_2_M.txt >>tmp
+done
+out=`cat tmp`
+cat << PARAMEND1 > $PARAM
+$labelbg $bgfile
+$line
+$out
+PARAMEND1
+
+#1.2 Subtract background from monthly SH files
+$BIN >  out_Subtract_Reference_SHCs <<EOF
+&parm
+   IDIR="./$renameodir/", 
+   ODIR="./$subodir/",
+   filenames="$PARAM",
+   NMAX=$NMAX,
+   ncut=$ncut,
+   C20file="$C20file",
+   ostdflag=$ostdflag,
+   C20flag=$C20flag,
+   /
+EOF
+#fi  #End of Comment
+
+#1.3 IF CSR data generate sigma0 by time series fitting
+if [ "$product" == "CSR" ]
+then  
+  BIN=plotSHseries_std_io.m
+  PARAM=plotSHseries_std_io.txt
+  
+  degordr=("60 22" "40 4")
+
+  degord=`for i in "${degordr[@]}"; do echo $i; done`
+   numdo=`for i in "${degordr[@]}"; do echo $i; done |wc -l`
+  indir="./$subodir/"
+
+  #Prepare the filename list
+  rm -f tmp 
+  for file in `cat $filelist`
+  do
+    echo "$file"_2_M.txt >>tmp
+  done
+  mv tmp filelist_cs
+  
+cat << PARAMEND1 > $PARAM
+$hmdir
+$indir
+filelist_cs
+${ymdse[0]}
+${ymdse[1]}
+1
+$numdo
+$degord
+PARAMEND1
+matlab < $BIN > out_sh_sigma0
+fi
+
+#2: Generating a global grid for bw=nmax+1+30 
+
+#3: Compute gravity and gravity gradients on the grid
+
+#test
+#gridfile=$hmdir/share/CHL/progdcl/grid_JP
+#line=0  #computation time is long; about 4 hours for 130 files
+
+BIN=GNR_STATC_fast_JP_var_gra_bp
+PARAM=filelistgra
+BIN2=GNR_STATC_fast_JP_var_grad_bp
+PARAM2=filelistgrad
+gradodir="$subodir"GRADbw"$bw"
+
+if [ ! -d $gradodir ]
+then
+   mkdir $gradodir
+fi
+#rm $gradodir/*
+
+#Prepare the filename list
+label="''"
+rm -f tmp tmp2
+for file in `cat $filelist`
+do
+  echo $label "$file"_2_M.txt "$file"_gra.txt >>tmp
+  echo $label "$file"_2_M.txt "$file"_grad.txt >>tmp2
+done
+out=`cat tmp`
+cat << PARAMEND1 > $PARAM
+$line
+$out
+PARAMEND1
+out2=`cat tmp2`
+cat << PARAMEND1 > $PARAM2
+$line
+$out2
+PARAMEND1
+
+$BIN > out_GNR_STATC_fast_JP_var_gra_nmax <<EOF
+&parm
+   NMAX=$NMAX
+   IDIR="./$subodir/",
+   ODIR="./$gradodir/", 
+   filenames="$PARAM",
+   gridfile="$gridfile",
+   ncut=$ncut,rc=$rc,grdflag=$grdflag  /
+EOF
+
+$BIN2 > out_GNR_STATC_fast_JP_var_grad_nmax <<EOF
+&parm
+   NMAX=$NMAX
+   IDIR="./$subodir/",
+   ODIR="./$gradodir/", 
+   filenames="$PARAM2",
+   gridfile="$gridfile",
+   ncut=$ncut,rc=$rc,grdflag=$grdflag /
+EOF
+
+#4: Generate the jump 
+BIN=plotGRAseriesFIT_wperiods_io.m
+PARAM=plotGRAseriesFIT_wperiods_io.txt
+
+#Prepare the filename list
+rm -f tmp tmp2
+for file in `cat $filelist`
+do
+  echo "$file"_gra.txt >>tmp
+  echo "$file"_grad.txt >>tmp2
+done
+mv tmp filelist_gra
+mv tmp2 filelist_grad
+
+datatype="$product"RL05
+gridtype=$gridfile
+indir=./$gradodir/
+
+if true !computation time is 6 minutes
+#if false
+then
+texteq=`for i in "${texteqr[@]}"; do echo $i; done`
+ymdeq=`for i in "${ymdeqr[@]}"; do echo $i; done`
+latloneq=`for i in "${latloneqr[@]}"; do echo $i; done`
+ymdd=`for i in "${ymddr[@]}"; do echo $i; done`
+latlono=`for i in "${latlonor[@]}"; do echo $i; done`
+
+cat << PARAMEND1 > $PARAM
+$datatype
+$gridtype
+gra
+$hmdir
+$indir
+filelist_gra
+${ymdse[0]}
+${ymdse[1]}
+$neq
+$texteq
+$ymdeq
+$latloneq
+$lend
+$ymdd
+$stdflag
+$linear
+$numo
+$latlono
+PARAMEND1
+
+matlab < $BIN > out_jumpgra
+
+#hmdir='F:\'
+#indir='F:\share/CHL/progdcl/RL05CSRmGOCOGRADJPstd/'
+
+cat << PARAMEND1 > $PARAM
+$datatype
+$gridtype
+grad
+$hmdir
+$indir
+filelist_grad
+${ymdse[0]}
+${ymdse[1]}
+$neq
+$texteq
+$ymdeq
+$latloneq
+$lend
+$ymdd
+$stdflag
+$linear
+$numo
+$latlono
+PARAMEND1
+matlab < $BIN > out_jumpgrad
+fi  #End of Comment
+
+fi  #End of Comment
+
+#II: Model predicted gravity and gravity gradients on the grid
+for (( i=1; i<=neq; i++ ))
+do
+texteq=${texteqr[i-1]}
+texteq=${texteq:0:4}
+latloneq=${latloneqr[i-1]}
+faultfile=${faultfiler[i-1]}
+faulttype=${faulttyper[i-1]}
+emfile=${emfiler[i-1]}
+emtype=${emtyper[i-1]}
+echo $i eq $texteq
+
+coefile=SA_graD_sigma_flat_bw900_potential.coe
+if [ ! -f $coefile ]
+then
+
+#II.1 Get crust model
+crustdir=$hmdir/Osuwork/GRACE/Seismic2gravityByLei/WangLei20100515_dai/GravityChangeofFaultIntegrationFitGRACE/GravityGreenFunction/crust2
+BIN=$crustdir/getCN2point_dai_ave_weight
+crustfile='crust2_select_ave_weight.dat'
+ #Input: CNelevatio2.txt  CNtype2_key.txt  CNtype2.txt; elev_select.dat
+ #Output: outcr; crust2_select_ave_weight.dat
+simple=false  #false
+
+if $simple
+then
+echo $latloneq |awk '{print $2, $1}' > elev_select.dat
+else
+  #Transform fault model format;then get longitude and latitude
+BIN2=Slipfmtstopscmp
+oceanthi=0
+$BIN2 << EOF
+$faultfile 'fault_pscmp.dat' $faulttype $oceanthi
+EOF
+awk 'NR%2==0' fault_pscmp.dat |awk '{print $3, $2}' > elev_select.dat
+fi
+ln -fs $crustdir/CN*.txt .
+$BIN > out_getCN2point_dai_ave_weight
+
+ #Retrieve some variables
+oceanthi=`grep 'water' $crustfile |awk '{print $1}'`
+elev=`grep 'Elevation' $crustfile |awk -F'[:]' '{print $2}'`
+echo $elev $latloneq > tmpin
+matlab < Epicenter2CE_io.m > out_Remob
+Remob=`awk '{print $1}' tmp` #Re minus r_ocean bottom, in meter
+Rob=`awk '{print $2}' tmp`
+echo oceanthi= $oceanthi elev= $elev Remob= $Remob Rob= $Rob
+
+if $usecrust2
+then
+echo 'Use the CRUST2.0 model'
+else
+echo 'Use the given earth model' 
+#transform it to be the same format as crust2
+$crustdir/em2crust << EOF
+$emfile $crustfile $emtype 3.9433
+EOF
+echo $emfile $crustfile $emtype $oceanthi
+fi
+
+cp $crustfile $crustfile$texteq
+
+#II.2 Transform fault model format
+BIN=Slipfmtstopscmp
+oceanthi=`grep 'water' $crustfile |awk '{print $1}'`
+echo 'oceanthi=' $oceanthi
+
+$BIN << EOF
+$faultfile 'fault_pscmp.dat' $faulttype $oceanthi
+EOF
+cp fault_pscmp.dat fault_pscmp"$texteq".dat
+
+#II.3 Get gD on sea floor
+pscmpdir=.
+BIN1=$pscmpdir/psgrn08.exe
+BIN2=$pscmpdir/pscmp08a_in.exe
+BIN0=$pscmpdir/crust2fmt_io.m
+grndir=psgrnfcts
+
+if [ ! -d $grndir ]
+then
+   mkdir $grndir
+fi
+
+cp $pscmpdir/psgrn08_io.inp .
+cp $pscmpdir/pscmp08_io.inp pscmp08_4SA_crustWei.inp
+
+usepremcrust=false
+echo $usepremcrust
+if  ! $usepremcrust
+then
+  echo PSCMP use only the CRUST model
+  cp $crustfile crust.dat
+matlab < $BIN0 > out_crust2fmt_io
+  cat tmp >> psgrn08_io.inp
+else  #use prem+crust
+  echo PSCMP use PREM+CRUST model
+  echo '0-layer crustal model (thickness,vp,vs,rho)' > $crustfile
+  Rob=6371000.
+$crustdir/crust4mineos << EOF
+$crustfile,$premcfile,$premfile,$Rob,$emotype
+EOF
+  cp $premcfile tmp
+  cat tmp >> psgrn08_io.inp
+fi
+rho_crust=`sed -n '2p' tmp |awk '{print $5}'`
+echo rho_crust= $rho_crust
+
+cp $gridfile2 gridpscmp
+
+if true  #computation time is long; psgrn 30 minutes; pscmp 7 minutes
+then
+$BIN1 << EOF > outpsgrn
+psgrn08_io.inp
+EOF
+$BIN2 << EOF > outpscmp
+pscmp08_4SA_crustWei.inp
+EOF
+fi
+
+#II.4 Get gravity and gravity gradient on R0
+gD2alldir=.
+
+ln -fs $gD2alldir/OF_bw900_fmt.txt .
+$gD2alldir/plotgr_flat_disp_4inv_bw900_topo <<EOF > out_plotgr
+$rho_crust
+EOF
+cp $gD2alldir/Mass2SHCs.txt .
+Mass2SHCs.lnx > out_Mass2SHCs
+
+cp $gD2alldir/Grid2SHCs.txt .
+Grid2SHCsLC.exe > out_Grid2SHCsLC
+
+#cp $gD2alldir/filelist_graD2potential_sum_SA .
+
+cat << PARAMEND1 > filelist_graD2potential_sum_SA
+1
+SA_graD_flat_bw900.coe  SA_graD_flat_bw900_potential.coe
+SA_sigma_ocean_flat_bw900.coe SA_sigma_ocean_flat_bw900_potential.coe
+                        SA_graD_sigma_ocean_flat_bw900_potential.coe
+PARAMEND1
+
+$gD2alldir/Trs_graD2potential_bw450_n_a1_4sigma_sum > out_Trs_graD2  <<EOF
+&parm
+   NMAX=$NMAXden
+   IDIR="./", 
+   ODIR='./', 
+   filenames='filelist_graD2potential_sum_SA'
+   oceanthi=$Remob,
+   /
+EOF
+fi #if coe don't exist
+
+BIN=$hmdir/share/CHL/progdcl/GNR_STATC_fast_JP_var_gra_bp
+PARAM=filelistgra
+BIN2=$hmdir/share/CHL/progdcl/GNR_STATC_fast_JP_var_grad_bp
+PARAM2=filelistgrad
+
+rm SA_graD_sigma_flat_bw900_potential.coe
+cp SA_graD_sigma_ocean_flat_bw900_potential.coe SA_graD_sigma_flat_bw900_potential.coe
+
+  #Prepare the filename list for GNR_STATC_fast_JP_var_gra_bp
+label="''"
+cat << PARAMEND1 > $PARAM
+1 
+$label SA_graD_sigma_flat_bw900_potential.coe SA_graD_sigma_flat_bw900_potential_gra.txt
+$label SA_graD_flat_bw900_potential.coe SA_graD_flat_bw900_potential_gra.txt
+$label SA_sigma_topoh_flat_bw900_potential.coe SA_sigma_topoh_flat_bw900_potential_gra.txt
+$label SA_sigma_ocean_flat_bw900_potential.coe SA_sigma_ocean_flat_bw900_potential_gra.txt
+PARAMEND1
+cat << PARAMEND1 > $PARAM2
+1
+$label SA_graD_sigma_flat_bw900_potential.coe SA_graD_sigma_flat_bw900_potential_grad.txt
+PARAMEND1
+
+$BIN > out_GNR_STATC_fast_JP_var_gra_nmax <<EOF
+&parm
+   NMAX=$NMAX
+   IDIR="./",
+   ODIR="./", 
+   filenames="$PARAM",
+   gridfile="$gridfile",
+   ncut=$ncut,rc=$rc,grdflag=$grdflag  /
+EOF
+
+$BIN2 > out_GNR_STATC_fast_JP_var_grad_nmax <<EOF
+&parm
+   NMAX=$NMAX
+   IDIR="./",
+   ODIR="./", 
+   filenames="$PARAM2",
+   gridfile="$gridfile",
+   ncut=$ncut,rc=$rc,grdflag=$grdflag /
+EOF
+
+lonlateq=`echo $latloneq |awk '{print $2, $1}'`
+BIN1=/0/home/dai.56/Osuwork/GRACE/Mar11JPEQ_gravitygradients/plotjump_Sun_gra_WangRJ_io.gmt
+BIN2=/0/home/dai.56/Osuwork/GRACE/Mar11JPEQ_gravitygradients/plotjump_Sun_grad_WangRJ_io.gmt
+$BIN1 SA_graD_sigma_flat_bw900_potential_gra.dat 2.9  $lonlateq
+$BIN2 SA_graD_sigma_flat_bw900_potential_grad.dat 2.9 $lonlateq
+
+#III: Compute the regional PSD
+BIN=Grid2PSD_io.m
+PARAM=Grid2PSD_io.txt
+
+datfile1=jump"$datatype"_FIT_wperiods_gra_"$gridtype""$texteq".dat
+datfile2=jump"$datatype"_FIT_wperiods_grad_"$gridtype""$texteq".dat
+cat << PARAMEND1 > $PARAM
+$datatype
+$hmdir
+$datfile1
+$datfile2
+$texteq
+$latloneq
+$bw
+PARAMEND1
+
+matlab < $BIN > out_psd
+done # for eq
+
