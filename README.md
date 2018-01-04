@@ -1,6 +1,10 @@
 # GRACEEarthquakeModeling
 
-Here provides the calculation of coseismic GRACE gravity change, the modeling of GRACE gravity change caused by an earthqauke, and the localized spectral analysis. 
+The code here provides the calculation of coseismic GRACE gravity change, the modeling of GRACE gravity change caused by an earthqauke, and the localized spectral analysis. 
+
+Notice: The shared code is for academic research. They are not user friendly. 
+Some of the subroutines are not shared due to copyright limit. 
+
 
 References:
 Dai, C., C. Shum, J. Guo, K. Shang, B. Tapley, R. Wang, Improved source parameter constraints for five undersea earthquakes from north component of GRACE gravity and gravity gradient change measurements, Earth Planet. Sci. Lett., 443, 118-128, 2016.
@@ -13,8 +17,6 @@ Wahr, J., Molenaar, M. and Bryan, F., 1998. Time variability of the Earth's grav
 
 Guo, J.Y., Shum, C.K., 2009, Application of the cos-Fourier expansion to data transformation between different latitude-longitude grids, Computers & Geosciences, 35, 1439-1444, doi:10.1016/j.cageo.2008.09.010
 
-Notice: The shared code is for academic research. They are not user friendly. 
-Some of the subroutine are not shared due to copyright limit. 
 
 SH2psd.scr: a shell script for modeling gravity change and calculating localized spectra.
 
