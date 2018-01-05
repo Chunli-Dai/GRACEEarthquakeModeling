@@ -1,0 +1,7 @@
+CSRRL05
+/0/home/dai.56
+jumpCSRRL05_FIT_wperiods_gra_grid_Gauss_bw912008.dat
+jumpCSRRL05_FIT_wperiods_grad_grid_Gauss_bw912008.dat
+2008
+31.44  104.10
+91
