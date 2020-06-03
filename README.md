@@ -20,12 +20,19 @@ Guo, J.Y., Shum, C.K., 2009, Application of the cos-Fourier expansion to data tr
 
 SH2psd.scr: a shell script for modeling gravity change and calculating localized spectra.
 
+
 Part one: calculation of coseismic GRACE gravity change.
+
 1\ Preparation
 
 Ggrid.f90: generate a regular grid.
 changenameCSR.sh: modify CSR GRACE L2 product name.
+            e.g. "./changenameCSR.sh filelist renameodir renameofile"
+            where filelist is a text file that have a list of GRACE filenames in it, here are two example lines:
+            GSM-2_2003121-2003141_0021_UTCSR_0060_0005
+            GSM-2_2003121-2003141_0021_UTCSR_0060_0005
 Subtract_Reference_SHCs_wwoH_NMAXncut_wstdM_SLRdC20.f: subtract a reference field (in terms of spherical harmonic coefficients).
+
 read_SHstd_wwoH.f: read spherical harmonic coefficients.
 plotSHseries_std_io.m: calculating the a posteriori variance of unit weight based on coefficient time series.
 
