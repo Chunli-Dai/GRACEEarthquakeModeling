@@ -25,13 +25,36 @@ Part one: calculation of coseismic GRACE gravity change.
 
 1\ Preparation
 
-Ggrid.f90: generate a regular grid.
+Ggrid.f90: generate a regular grid, e.g. grid_Gauss_bw900WEN in ex1.zip file.
 changenameCSR.sh: modify CSR GRACE L2 product name.
-            e.g. "./changenameCSR.sh filelist renameodir renameofile"
-            where filelist is a text file that have a list of GRACE filenames in it, here are two example lines:
+            e.g. "./changenameCSR.sh ifilelist renameodir filelist"
+            where ifilelist is a text file that have a list of GRACE filenames in it, here are two example lines (see ifilelist in ex1.zip file):
             GSM-2_2003121-2003141_0021_UTCSR_0060_0005
-            GSM-2_2003121-2003141_0021_UTCSR_0060_0005
+            GSM-2_2012336-2012366_0029_EIGEN_G---_0005
+            filelist is the output list of files (see filelist in ex1.zip file).
+            
 Subtract_Reference_SHCs_wwoH_NMAXncut_wstdM_SLRdC20.f: subtract a reference field (in terms of spherical harmonic coefficients).
+            e.g. 
+            "./Subtract_Reference_SHCs_wwoH_NMAXncut_wstdM_SLRdC20 >  out_Subtract_Reference_SHCs <<EOF
+&parm
+   IDIR="./IDIR/", 
+   ODIR="./ODIR/",
+   filenames="Subtract_filelist",
+   NMAX=60,
+   ncut=1,
+   C20file="TN-07_C20_SLR_match.txt",
+   ostdflag=1,
+   C20flag=0,
+   /
+EOF
+"
+            where, IDIR, ODIR are input output directories. 
+            Subtract_filelist is an input file (see Subtract_filelist in ex1.zip file).
+            NMAX is the maximum degree, e.g. 60. 
+            All degrees and orders less than ncut are set to zero, so ncut can be zero or 1.
+            C20file is the file that contains the accurate C20 time series (see TN-07_C20_SLR_match.txt in ex1.zip file). 
+            C20flag, a flag (e.g. 0). If C20flag is 1, the code will use the C20file, if it is zero, it will not use the file.
+            ostdflag, a flag (e.g. 1) for choosing to output the uncertainties or not. 1 means to write uncercainties.
 
 read_SHstd_wwoH.f: read spherical harmonic coefficients.
 plotSHseries_std_io.m: calculating the a posteriori variance of unit weight based on coefficient time series.
@@ -72,6 +95,8 @@ Part three: localized spectra based on Slepian basis function.
 Grid2PSD_io.m: get localized spectra from spatial signals. See Dr. Frederik Simons's code for subroutines (http://geoweb.princeton.edu/people/simons/software.html).
 
 
-Please acknowledge this code in publications or academic journals.
+Please acknowledge this code in publications or academic journals by citing:
+Dai, C., C. Shum, J. Guo, K. Shang, B. Tapley, R. Wang, Improved source parameter constraints for five undersea earthquakes from north component of GRACE gravity and gravity gradient change measurements, Earth Planet. Sci. Lett., 443, 118-128, 2016.
+
 
 
