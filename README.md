@@ -57,7 +57,7 @@ EOF
             ostdflag, a flag (e.g. 1) for choosing to output the uncertainties or not. 1 means to write uncercainties.
 
 read_SHstd_wwoH.f: read spherical harmonic coefficients.
-plotSHseries_std_io.m: calculating the a posteriori variance of unit weight based on coefficient time series.
+plotSHseries_std_io.m: calculating the a posteriori variance of unit weight based on coefficient time series. A subroutine for plotting shaded error bars is here: https://github.com/raacampbell/shadedErrorBar.
 
 2\ Calculate gravity and gravity gradient from coefficients.
 GNR_STATC_fast_JP_var_gra_bp.f: calculate North, East, Down components of gravity from coefficients.
