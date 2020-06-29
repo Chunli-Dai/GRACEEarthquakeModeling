@@ -66,14 +66,26 @@ lgdr2.f90: Not shared; calculate the FULLY NORMALIZED LEGENDRE FUNCTION WITH GIV
 GNR_STATC_fast_JP_var_grad_bp.f: calculate the six components of gravity gradient from coefficients.
 subAPgrad.f, AP.f: subroutines.
 
+
+Output example: 2002_107_gra.txt; Data format: latitude (degrees), longitude (degrees), gravity_North (microGals), gravity_East (microGals), gravity_Down (microGals), uncertainty of gravity_North (microGals), uncertainty of gravity_East (microGals), uncertainty of gravity_Down (microGals).
+
+2002_107_grad.txt; Data format: latitude (degrees), longitude (degrees), Txx (mE), Tyy (mE), Tzz (mE), Txy (mE), Txz (mE), Tyz (mE), uncertainty of Txx (mE), uncertainty of Tyy (mE), uncertainty of Tzz (mE), uncertainty of Txy (mE), uncertainty of Txz (mE), uncertainty of Tyz (mE). Where, 1 milli-Eotvos (mE) = 10^−12 second^−2
+
 3\ Calculate the jump from time series.
 plotGRAseriesFIT_wperiods_io.m: Calculate the jump from time series.
+Output example: The change of gravity gradient in six components: jumpCSRRL05ex1_FIT_wperiods_gradNMAX60_grid_JPFeb13.dat; 
+Data format: latitude (degrees), longitude (degrees), Txx (mE), Tyy (mE), Tzz (mE), Txy (mE), Txz (mE), Tyz (mE), uncertainty of Txx (mE), uncertainty of Tyy (mE), uncertainty of Tzz (mE), uncertainty of Txy (mE), uncertainty of Txz (mE), uncertainty of Tyz (mE). 
 
+The change of gravity in North East Down components: jumpCSRRL05ex1_FIT_wperiods_graNMAX60_grid_JPFeb13;
+Data format:latitude (degrees), longitude (degrees), gravity_North (microGals), gravity_East (microGals), gravity_Down (microGals), uncertainty of gravity_North (microGals), uncertainty of gravity_East (microGals), uncertainty of gravity_Down (microGals).
 
 Part two: Modeling of GRACE gravity change caused by an earthqauke.
 
 1\ Get crust model.
 getCN2point_dai_ave_weight.f: Get the 1D crust model for a local region. Need the latest global CRUST model and software. 
+Input: CNelevatio2.txt  CNtype2_key.txt  CNtype2.txt; elev_select.dat
+Output: crust2_select_ave_weight.dat
+
 Slipfmtstopscmp.f90: transform earthquake slip models to the format for PSCMP.
 Epicenter2CE_io.m: retrieve geocentric distance of the fault plane.
 
