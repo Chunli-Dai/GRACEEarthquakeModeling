@@ -108,7 +108,14 @@ Grid2PSD_io.m: get localized spectra from spatial signals. See Dr. Frederik Simo
 
 
 Please acknowledge this code in publications or academic journals by citing:
+
 Dai, C., C. Shum, J. Guo, K. Shang, B. Tapley, R. Wang, Improved source parameter constraints for five undersea earthquakes from north component of GRACE gravity and gravity gradient change measurements, Earth Planet. Sci. Lett., 443, 118-128, 2016.
+
+Guo, J.Y., Shum, C.K., 2009, Application of the cos-Fourier expansion to data transformation between different latitude-longitude grids, Computers & Geosciences, 35, 1439-1444, doi:10.1016/j.cageo.2008.09.010
+
+Wang, R., F. Lorenzo‐Martin, and F. Roth (2006), PSGRN/PSCMP—A new code for calculating co‐ and post‐seismic deformation, geoid and gravity changes based on the viscoelastic‐gravitational dislocation theory, Comput. Geosci., 32, 527–541, doi:10.1016/j.cageo.2005.08.006. 
+
+Wieczorek, M. A., and F. J. Simons (2005), Localized spectral analysis on the sphere, Geophys. J. Int., 162, 655–675. 
 
 
 
